@@ -1,4 +1,3 @@
-
 tools = [
     {
         "name": "get_token_price",
@@ -9,9 +8,9 @@ tools = [
                 "crypto_symbol": {
                     "type": "string",
                     "description": "The symbol of the cryptocurrency",
+                    "required": True,
                 }
             },
-            "required": ["crypto_symbol"],
         },
     },
     {

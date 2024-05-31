@@ -2,6 +2,7 @@ import json, torch
 from typing import List
 from logger import logger
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from models import Message
 
 
 class Inference:
@@ -31,32 +32,40 @@ class Inference:
             self.tokenizer.convert_tokens_to_ids("<|end|>"),
         ]
 
-    def perform_search(self, search_terms: List[str]) -> str:
+    def clear(self):
         """
-        Performs search using the model
-
-        Args:
-            search_terms (List[str]): The search terms
-
-        Returns:
-            str: The response from the model
+        Clears the model and tokenizer
         """
-        # Create the messages
-        messages = [
-            {"role": "user", "content": self.tool["description"]},
-            {"role": "user", "content": json.dumps(self.tool["parameter"])},
-            {
-                "role": "user",
-                "content": f"<functioncall>{json.dumps(self.tool['name'])} "
-                f"{json.dumps({'arguments': {'search_terms': search_terms}})}</functioncall>",
-            },
-        ]
-
+        self.model = None
+        self.tokenizer = None
+    
+    def __tokenize(self, messages):
         # Convert the messages to input ids
         input_ids = self.tokenizer.apply_chat_template(
             messages, add_generation_prompt=True, return_tensors="pt"
         ).to(self.model.device)
 
+    def get_response(self, messages: List[Message]) -> str:
+        """
+        Performs search using the model
+
+        Args:
+            messages (List[Message]): The messages to be used for search
+        Returns:
+            str: The response from the model
+        """
+        # Add the custom message before latest message
+        messages.insert(
+            -1,
+            Message(
+                role="user",
+                content=f"You are a helpful assistant with access to the following functions. Use them if required - {str(self.tool)}",
+            ),
+        )
+        if not isinstance(self.model, AutoModelForCausalLM):
+            raise ValueError("Model is not initialized")
+        
+        input_ids = self.__tokenize([message.model_dump() for message in messages])
         # Generate the response
         outputs = self.model.generate(
             input_ids,
@@ -68,7 +77,8 @@ class Inference:
 
         # Decode the response
         response = outputs[0]
-        return self.tokenizer.decode(response)
+        first = self.tokenizer.decode(response)
+        print(first)
+
 
 # <|assistant|> <functioncall> {"name": "search_web", "arguments": {"search_terms": ["news", "Melbourne", "May 7, 2024"]}}<|end|>
-

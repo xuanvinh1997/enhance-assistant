@@ -1,4 +1,13 @@
 import React, { useState, useRef } from 'react';
+import axios from 'axios';
+
+const url = process.env.CHAT_URL || 'http://localhost:8000';
+
+const sendMessage = async (messages) => {
+  return axios.post(`${url}/api/chat`, {
+    messages
+  });
+}
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
